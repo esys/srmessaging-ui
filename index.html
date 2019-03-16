@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>srmessasging client</title>
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
+  </head>
+  <body>
+
+    <div class="form-group" style="padding: 20px">        
+        <div>
+            <label class="form-label" for="uid">ID</label>
+            <input class="form-input" id="uid" placeholder="...saying hello to server..." disabled></input>
+        </div>
+
+        <div>
+            <label class="form-label" for="to">Send To</label>
+            <input class="form-input" id="to" placeholder="userID"></textarea>
+            <label class="form-label" for="msg">Message</label>
+            <div>
+                <textarea class="form-input" id="msg" rows="5" cols="33"></textarea>
+                <button class="btn btn-primary" onclick="send()">Send</button>
+            </div>
+        </div>
+        <div>
+                <label class="form-label" for="received">Received</label>
+                <textarea class="form-input" id="received" rows="5" cols="33" disabled></textarea>
+            </div>
+    </div>
+
+    <script>
+            var conn = null;
+
+            const send = () => {
+                let txt = document.getElementById("msg").value
+                let me = document.getElementById("uid").value
+                let recipient = document.getElementById("to").value
+                let msg = {
+                    "type": "CHAT",
+                    "from": me,
+                    "to": recipient,
+                    "content": txt
+                }
+                sendMessage(conn, msg)
+            }
+
+            const sendMessage = (conn, msg) => {
+                let js = JSON.stringify(msg)
+                console.log("sending", js)
+                conn.send(js)
+            }
+
+            const appendChat = (msg) => {
+                let log = `[${new Date().toISOString()}][${msg.from}] ${msg.content}`
+                let received = document.getElementById("received")
+                received.value += log + "\n"
+            }
+
+            (function() {
+                conn = new WebSocket("ws://localhost:8080/ws");
+                conn.onmessage = function(e) {
+                    console.log("connection received message", e.data);
+                    let data = JSON.parse(e.data)
+                    switch (data.type) {
+                        case "HELLO": {
+                            document.getElementById("uid").value = data.to;
+                            break;
+                        }
+                        case "CHAT": {
+                            appendChat(data);
+                            break;
+                        }
+                        default: {
+                            console.log("unknown message type", data.type)
+                        }
+                    }
+                };
+                conn.onopen = function (event) {
+                    sendMessage(conn, {type: "HELLO"}); 
+                }
+
+            })();
+
+    </script>
+  </body>
+</html>
+
+
